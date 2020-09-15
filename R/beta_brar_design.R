@@ -8,6 +8,7 @@
 #' @param approx       Use approximate rather than numerical methods.
 #' @param perm_drop    Permanently drop any arm which is not `active`.
 #' @param mwu          Use mass-weighted urn randomisation
+#' @param minimum      Target minimum instead of maximum outcome
 #' @param bpar         Parameter for control = `match`.
 #' @param hpar1        Parameter to control amount of RAR
 #' @param hpar2        Parameter to control scaling of RAR

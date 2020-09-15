@@ -36,8 +36,10 @@ findfirst <- function(x, v = NA) {
 #'
 #' @export
 plot_beta_norm <- function(a, b, ...) {
-  curve(dbeta(x, a, b), ...)
-  curve(dnorm(x, a/(a + b), sqrt( a*b / ((a+b)^2*(a+b+1)) )), add = TRUE, col = "red", ...)
+  fbeta <- function(x) dbeta(x, a, b)
+  fnorm <- function(x) dnorm(x, a/(a + b), sqrt( a*b / ((a+b)^2*(a+b+1))))
+  graphics::curve(fbeta, ...)
+  graphics::curve(fnorm, add = TRUE, col = "red", ...)
 }
 
 #' Calculate density of beta-binomial distribution
@@ -165,6 +167,9 @@ beta_ineq_sim <- function(a, b, c, d, delta = 0, sims = 10000) {
 }
 
 
+
+N <- NULL
+P <- NULL
 #' Calculate the predicted probability of success
 #'
 #' @import data.table
@@ -193,7 +198,7 @@ calc_ppos <- function(
   post_method = "exact",
   post_sim = 1e4) {
 
-  library(data.table)
+  requireNamespace(data.table)
   if(!(all(c(a, b, c, d, m1, m2) > 0))) stop("a, b, c, d, m1, m2 must be > 0")
   if(k_ppos < 0 | k_ppos > 1) stop("k_ppos must be in [0, 1]")
 
@@ -204,8 +209,8 @@ calc_ppos <- function(
 
   y1pred <- rbetabinom(post_sim, m1, a, b)
   y2pred <- rbetabinom(post_sim, m2, c, d)
-  ypred <- data.table(y1pred = y1pred, y2pred = y2pred)[, .N, keyby = list(y1pred, y2pred)]
-  ypred[, `:=`(P = Vectorize(calc_post)(a + y1pred,
+  ypred <- data.table::data.table(y1pred = y1pred, y2pred = y2pred)[, .N, keyby = list(y1pred, y2pred)]
+  ypred[, data.table::`:=`(P = Vectorize(calc_post)(a + y1pred,
                                         b + m1 - y1pred,
                                         c + y2pred,
                                         d + m2 - y2pred))]

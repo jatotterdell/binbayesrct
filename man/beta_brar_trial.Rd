@@ -41,6 +41,8 @@ beta_brar_trial(
 
 \item{mwu}{Use mass-weighted urn randomisation}
 
+\item{minimum}{Target minimum instead of maximum outcome}
+
 \item{bpar}{Parameter for control = \code{match}.}
 
 \item{hpar1}{Parameter to control amount of RAR}

@@ -13,6 +13,9 @@ fix_ctrl_brar(quantity, active, h)
 
 \item{h}{Scaling factor}
 }
+\value{
+A vector of allocation probabilities
+}
 \description{
 BRAR with fixed ratio to control
 }
