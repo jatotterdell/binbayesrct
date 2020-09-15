@@ -1,5 +1,5 @@
 Package: binbayesrct
-Title: Function for binary Bayesian adaptive RCT
+Title: Functions for binary Bayesian adaptive RCT simulation
 Version: 0.0.1
 Authors@R: 
     person(given = "James",
@@ -7,12 +7,13 @@ Authors@R:
            role = c("aut", "cre"),
            email = "jatotterdell@gmail.com",
            comment = c(ORCID = "https://orcid.org/0000-0002-9459-2566"))
-Description: What the package does (one paragraph).
+Description: Functions for binary Bayesian adaptive RCT simulation.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Imports: 
     pracma,
-    loo
+    loo,
+    data.table

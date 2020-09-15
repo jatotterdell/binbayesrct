@@ -10,8 +10,10 @@ beta_brar_trial(
   rand_quant = "best",
   active_quant = "best",
   control = "fix",
-  approx = F,
-  perm_drop = F,
+  approx = FALSE,
+  perm_drop = FALSE,
+  mwu = FALSE,
+  minimum = TRUE,
   bpar = 0.5,
   hpar1 = 2.5,
   hpar2 = 3,
@@ -36,6 +38,8 @@ beta_brar_trial(
 \item{approx}{Use approximate rather than numerical methods.}
 
 \item{perm_drop}{Permanently drop any arm which is not \code{active}.}
+
+\item{mwu}{Use mass-weighted urn randomisation}
 
 \item{bpar}{Parameter for control = \code{match}.}
 

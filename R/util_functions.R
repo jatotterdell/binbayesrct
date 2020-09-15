@@ -21,9 +21,195 @@ normalise <- function(x)
 #' @param x A logical vector
 #' @param v A default value if none satisfy condition
 #' @return Index of first to satisfy condition
+#' @export
 findfirst <- function(x, v = NA) {
   j <- which(x)
   if(length(j)) min(j) else v
+}
+
+#' Compare Normal approximation to Beta
+#'
+#' @param a First Beta parameter
+#' @param b Second Beta parameter
+#' @param ... Other arguments to `curve()`
+#' @return A plot of Beta density and Normal approximation
+#'
+#' @export
+plot_beta_norm <- function(a, b, ...) {
+  curve(dbeta(x, a, b), ...)
+  curve(dnorm(x, a/(a + b), sqrt( a*b / ((a+b)^2*(a+b+1)) )), add = TRUE, col = "red", ...)
+}
+
+#' Calculate density of beta-binomial distribution
+#'
+#' @param x The value at which to evaluate the density
+#' @param n The sample size
+#' @param a First parameter
+#' @param b Second parameter
+#'
+#' @return Value of beta-binomial(n,a,b) evaluated at x
+#'
+#' @examples
+#' dbetabinom(5, 10, 2, 3)
+#'
+#' @export
+dbetabinom <- function(x, n, a = 1, b = 1){
+  if(!(all(c(a, b) > 0))) stop("a and b must be > 0")
+  if(any(n < 1)) stop("n must be > 0")
+  if(any(x < 0)) stop("x must be >= 0")
+
+  num <- lgamma(a + b) + lgamma(n + 1) + lgamma(x + a) + lgamma(n - x + b)
+  den <- lgamma(a) + lgamma(b) + lgamma(x + 1) + lgamma(n - x + 1) + lgamma(n + a + b)
+  prob <- exp(num - den)
+  prob
+}
+
+#' Draw random variates from beta-binomial distribution
+#'
+#' @import stats
+#'
+#' @param n The number of random values to sample
+#' @param m The sample size
+#' @param a First parameter
+#' @param b Second parameter
+#'
+#' @examples
+#' rbetabinom(2, 10, 2, 3)
+#'
+#' @export
+rbetabinom <- function(n, m, a = 1, b = 1) {
+  if(!(all(c(a, b) > 0))) stop("a and b must be > 0")
+  if(!(all(n > 0))) stop("n must be > 0")
+
+  stats::rbinom(n, m, stats::rbeta(n, a, b))
+}
+
+#' Calculate Pr(X > Y + delta) where X and Y are independent Beta random variables
+#' using numerical integration
+#'
+#' @param a Parameter one of beta density for X
+#' @param b Parameter two of beta density for X
+#' @param c Parameter one of beta density for Y
+#' @param d Parameter two of beta density for Y
+#' @param delta The difference we wish to assess (i.e. X - Y > delta)
+#' @param ... other arguments passed to integrate/quadgk function
+#'
+#' @return The value of the integral
+#'
+#' @examples
+#' beta_ineq(5, 5, 3, 7)
+#'
+#' @export
+beta_ineq <- function(a, b, c, d, delta = 0, ...) {
+
+  if(!(all(c(a, b, c, d) > 0))) stop("a, b, c, d must be > 0")
+
+  integrand <- function(x) { stats::dbeta(x, a, b)*stats::pbeta(x - delta, c, d) }
+  tryCatch(
+    pracma::quadgk(integrand, delta, 1, ...),
+    error = function(err) NA)
+}
+
+#' Calculate Pr(X > Y + delta) where X and Y are independent Beta random variables
+#' using Normal approximation.
+#'
+#' @param a Parameter one of beta density for X
+#' @param b Parameter two of beta density for X
+#' @param c Parameter one of beta density for Y
+#' @param d Parameter two of beta density for Y
+#' @param delta The difference we wish to assess (i.e. X - Y > delta)
+#' @return The value of the integral
+#'
+#' @examples
+#' beta_ineq_approx(5, 5, 3, 7)
+#'
+#' @export
+beta_ineq_approx <- function(a, b, c, d, delta = 0) {
+  if(!(all(c(a, b, c, d) > 0))) stop("a, b, c, d must be > 0")
+
+  m1 <- a / (a + b)
+  v1 <- a*b / ( (a + b)^2 * (a + b + 1))
+  m2 <- c / (c + d)
+  v2 <- c*d / ( (c + d)^2 * (c + d + 1))
+  z <- (m1 - m2 - delta) / sqrt(v1 + v2)
+  return(stats::pnorm(z))
+}
+
+#' Calculate Pr(X > Y + delta) where X and Y are independent Beta random variables
+#' using Monte Carlo method.
+#'
+#' @param a Parameter one of beta density for X
+#' @param b Parameter two of beta density for X
+#' @param c Parameter one of beta density for Y
+#' @param d Parameter two of beta density for Y
+#' @param delta The difference we wish to assess (i.e. X - Y > delta)
+#' @param sims The number of Monte Carlo variates to generate for estimation
+#'
+#' @return The value of the integral
+#'
+#' @examples
+#' beta_ineq_sim(5, 5, 3, 7)
+#'
+#' @export
+beta_ineq_sim <- function(a, b, c, d, delta = 0, sims = 10000) {
+  if(!(all(c(a, b, c, d) > 0))) stop("a, b, c, d must be > 0")
+
+  lens <- unlist(lapply(list(a, b, c, d), length))
+  if(any(max(lens)- min(lens) != 0)) stop("a, b, c, d must be same len")
+
+  X <- lapply(1:length(a), function(x) stats::rbeta(sims, a[x], b[x]))
+  Y <- lapply(1:length(a), function(x) stats::rbeta(sims, c[x], d[x]))
+
+  means <- lapply(1:length(a), function(x) mean(X[[x]] > Y[[x]] + delta))
+  unlist(means)
+}
+
+
+#' Calculate the predicted probability of success
+#'
+#' @import data.table
+#'
+#' @param a First parameter of first beta random variable
+#' @param b Second parameter of first beta random variable
+#' @param c First paramter of second beta random variable
+#' @param d Second parameter of second beta random variable
+#' @param m1 Sample size to predict for first beta random variable
+#' @param m2 Sample size to predict for second beta random variable
+#' @param k_ppos The posterior probability cut-point to be assessed
+#' @param post_method Method for calcuation: exact, approx, or sim.
+#' @param post_sim Number of posterior draws to use for PPoS
+#'
+#' @return The predicted probability of success
+#'
+#' @export
+calc_ppos <- function(
+  a,
+  b,
+  c,
+  d,
+  m1,
+  m2,
+  k_ppos,
+  post_method = "exact",
+  post_sim = 1e4) {
+
+  library(data.table)
+  if(!(all(c(a, b, c, d, m1, m2) > 0))) stop("a, b, c, d, m1, m2 must be > 0")
+  if(k_ppos < 0 | k_ppos > 1) stop("k_ppos must be in [0, 1]")
+
+  calc_post <- switch(post_method,
+                      "exact" = beta_ineq,
+                      "approx" = beta_ineq_approx,
+                      "sim" = beta_ineq_sim)
+
+  y1pred <- rbetabinom(post_sim, m1, a, b)
+  y2pred <- rbetabinom(post_sim, m2, c, d)
+  ypred <- data.table(y1pred = y1pred, y2pred = y2pred)[, .N, keyby = list(y1pred, y2pred)]
+  ypred[, `:=`(P = Vectorize(calc_post)(a + y1pred,
+                                        b + m1 - y1pred,
+                                        c + y2pred,
+                                        d + m2 - y2pred))]
+  ypred[, c(sum(N*(P > k_ppos)) / sum(N))]
 }
 
 
@@ -85,6 +271,32 @@ mass_weighted_urn_design <- function(
     mass = x,
     sample_size = n,
     selection_prob = p))
+}
+
+
+#' Mean of a beta random variable with parameters a and b
+#'
+#' @param a Par 1
+#' @param b Par 2
+#' @examples
+#' beta_mean(5, 5)
+#' @export
+beta_mean <- function(a, b) {
+  return(a / (a + b))
+}
+
+
+#' Mean of added beta random variables
+#'
+#' Always taken in reference to control, e.g. `(a[1], b[1])`.
+#'
+#' @param a Collection of shape 1 par
+#' @param b Collection of shape 2 par
+#' @examples
+#' diff_beta_mean(c(5, 5, 4), c(5, 5, 4))
+#' @export
+diff_beta_mean <- function(a, b) {
+  return(beta_mean(a[-1], b[-1]) - beta_mean(a[1], b[1]))
 }
 
 
@@ -252,6 +464,7 @@ beta_prob_best_approx <- function(a, b, minimum = FALSE, nsim = 2e4) {
 #' @param approx Use approximation instead of integration
 #' @param ... Other arguments to `pracma::quadgk`
 #' @return A vector of `length(a)` giving `Pr(a[i] is max)`
+#' @export
 beta_prob_best <- function(a, b, minimum = FALSE, approx = FALSE, ...) {
   if(!(all(c(a, b) > 0))) stop("a, b, must be > 0")
   k <- length(a)
@@ -475,6 +688,8 @@ prob_best <- function(mat, minimum = F) {
 #' @param quantity The quantity for allocation ratios
 #' @param active Flag for active arms
 #' @param h Scaling factor
+#' @return A vector of allocation probabilities
+#' @export
 fix_ctrl_brar <- function(quantity, active, h) {
   arms <- length(active)
   w <- numeric(arms)
@@ -488,7 +703,7 @@ fix_ctrl_brar <- function(quantity, active, h) {
     w[-1][!active[-1]] <- 0
     w[-1] <- normalise(w[-1])
   } else {
-    w[1] <- 1 / sum(active)
+    w[1] <- 1 / (sum(active))
     w[-1] <- quantity[-1] ^ h
     w[-1][!active[-1]] <- 0
     w[-1] <- normalise(w[-1])
